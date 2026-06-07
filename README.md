@@ -25,6 +25,7 @@ A complete Python interface, GUI controller, and autonomous navigation toolkit f
 - [Communication Protocol](#communication-protocol)
 - [Known Hardware Quirks](#known-hardware-quirks)
 - [Running the Tests](#running-the-tests)
+- [Contributing & Collaboration](#contributing--collaboration)
 
 ---
 
@@ -400,3 +401,62 @@ python test/run_all.py
 ```
 
 Movement and mode tests are interactive — you confirm whether the car behaved correctly with `[y/n]` prompts.
+
+---
+
+## Contributing & Collaboration
+
+Contributions, bug reports, and ideas are welcome. This project grew out of reverse-engineering the ACEBOTT firmware and testing on real hardware, so there is plenty of room to expand.
+
+### How to Contribute
+
+1. **Fork** the repository and create a feature branch:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+2. Make your changes. Follow the existing code style:
+   - Pure Python stdlib only — no third-party dependencies in the core modules
+   - One class per module, constants at the top, methods grouped by category
+   - Keep firmware-facing logic in `acebott_car.py` / `acebott_cv_car.py` only
+3. If you add a new feature, add a corresponding test in `test/`
+4. **Open a Pull Request** with a clear description of what changed and why
+
+### Good First Contributions
+
+| Area | Idea |
+|---|---|
+| Hardware | Test on different surfaces and update `MIN_EFFECTIVE_SPEED` per surface type |
+| QD001 firmware | Fix the `Tservo.attach()` bug and verify `set_servo()` works |
+| QD003 | Verify exact colour IDs for `mode_color_tracking()` against the ACB_CanMV library |
+| GUI | Add a joystick/gamepad controller using `pygame` |
+| Navigator | Add route replay — read an exported JSON and drive the same path again |
+| Navigator | Add a course editor — draw a route on the map and generate sign placement instructions |
+| Testing | Port the test suite to `pytest` for CI integration |
+| Docs | Add wiring diagrams for both variants |
+
+### Reporting Bugs
+
+When reporting a bug, include:
+- Which firmware variant (QD001 Pro or QD003)
+- Python version and OS
+- The exact command or method call that fails
+- What the car does vs what you expected
+- Output from the **Raw Data from Car** feed in the GUI or navigator if relevant
+
+### Collaboration Areas
+
+If you are working on something larger, open an issue first to discuss:
+
+- **ROS2 integration** — wrapping `AcebottCar` as a ROS2 hardware interface node
+- **Computer vision pipeline** — processing QD003 tag data to build occupancy grids or semantic maps
+- **Multi-car coordination** — extending the TCP protocol to control multiple cars from one script
+- **Web interface** — Flask/FastAPI backend serving the GUI controls as a web app for phone control
+- **Firmware modifications** — adding encoder feedback, PID speed control, or bidirectional sensor streaming
+
+### Code of Conduct
+
+Be respectful and constructive. Contributions of all experience levels are welcome — if you are new to robotics or Python, feel free to open an issue just to ask a question.
+
+---
+
+*Built with Python and real hardware. All protocol details were reverse-engineered from the original ACEBOTT firmware source.*
