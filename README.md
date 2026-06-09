@@ -21,6 +21,7 @@ A complete Python interface, GUI controller, and autonomous navigation toolkit f
 - [GUI Controllers](#gui-controllers)
   - [car_gui.py — QD001 Pro Controller](#car_guipy--qd001-pro-controller)
   - [cv_car_gui.py — QD003 CV Controller](#cv_car_guipy--qd003-cv-controller)
+- [Voice Control](#voice-control)
 - [Traffic Sign Navigator](#traffic-sign-navigator)
 - [Communication Protocol](#communication-protocol)
 - [Known Hardware Quirks](#known-hardware-quirks)
@@ -127,6 +128,7 @@ acebott-qd001-pro/
 ├── car_client.py               # QD001 Pro quick demo script
 ├── car_gui.py                  # QD001 Pro GUI controller
 ├── cv_car_gui.py               # QD003 GUI controller
+├── voice_control.py            # Offline voice control (Vosk / PyAudio)
 ├── traffic_navigator.py        # Autonomous traffic sign navigator
 │
 └── test/
@@ -143,6 +145,13 @@ acebott-qd001-pro/
 
 - Python 3.10+
 - No external packages required for the core modules or GUIs (Tkinter is built in)
+- **Voice control only:** `pip install vosk pyaudio`
+
+  > Download the speech model once (needs internet, ~40 MB):
+  > ```
+  > python voice_control.py --download-model
+  > ```
+  > The model is saved locally in `vosk_model/` and used offline from then on.
 
 Connect to the car's WiFi before running any script:
 
@@ -313,6 +322,61 @@ python cv_car_gui.py
 - **Colour selector** radio buttons for colour tracking target
 - **RGB LED sliders** for the camera module LED (R/G/B, 0–255 each)
 - **Live Recognition panel** — large text shows latest tag, mode badge, timestamped log
+
+---
+
+## Voice Control
+
+```
+python voice_control.py               # QD001 Pro (standard firmware)
+python voice_control.py --cv          # QD003 (CV firmware)
+python voice_control.py --host 192.168.4.1 --port 100
+```
+
+Fully offline speech control using the [Vosk](https://alphacephei.com/vosk/) engine. No internet connection needed at runtime — only during the one-time model download.
+
+**First-time setup (do once, with internet):**
+```
+pip install vosk pyaudio
+python voice_control.py --download-model
+```
+
+**Spoken commands:**
+
+| Say | Action |
+|---|---|
+| `go straight [for N seconds]` | Forward |
+| `go back [for N seconds]` | Backward |
+| `turn left [for N seconds]` | Spin counter-clockwise |
+| `turn right [for N seconds]` | Spin clockwise |
+| `turn around` | ~180° spin |
+| `strafe left [for N seconds]` | Translate left |
+| `strafe right [for N seconds]` | Translate right |
+| `stop` / `halt` | Stop immediately |
+| `speed 200` | Set speed (150–255) |
+| `exit` / `quit` | Disconnect and close |
+
+If no duration is given the car moves for **1.5 s** (turns: **0.6 s**).
+
+**`--cv` flag (QD003 / CV firmware):**  
+The CV firmware stops motors on every received packet. Without `--cv` a single `forward` call would be cancelled instantly. When `--cv` is set the script re-sends each movement command every 50 ms for the full duration, keeping the motors running.
+
+**Mishearing corrections:**  
+The small Vosk model sometimes mis-recognises command words. The script corrects known substitutions before parsing:
+
+| Heard | Corrected to |
+|---|---|
+| `streets`, `street`, `tweets`, `strait` | `straight` |
+| `strap left/right` | `strafe left/right` |
+| `lifts` | `left` |
+| `good/who/got <motion>` | `go <motion>` |
+| `ford`, `foreword` | `forward` |
+
+When a correction fires the terminal shows both the raw and corrected text:
+```
+Heard: "good tweets"  →  corrected: "go straight"
+  -> Forward      (1.5s)
+```
 
 ---
 

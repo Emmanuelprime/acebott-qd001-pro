@@ -1,0 +1,6 @@
+# Core modules (acebott_car.py, acebott_cv_car.py, GUIs, tests)
+# use Python stdlib only — no third-party packages needed.
+
+# Voice control (voice_control.py) — install these before use:
+vosk>=0.3.45
+pyaudio>=0.2.14

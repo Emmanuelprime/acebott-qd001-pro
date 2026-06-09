@@ -215,6 +215,22 @@ class CVCarGUI:
         )
         self._result_lbl.pack(padx=8, pady=(2, 4), fill="x")
 
+        # Traffic mode workflow hint — hidden until traffic mode is active
+        self._traffic_hint = tk.Label(
+            vis_box,
+            text="① Show sign to camera  →  ② Remove sign  →  ③ Car moves after 500 ms",
+            bg=SURFACE, fg=YELLOW, font=("Segoe UI", 8), pady=4, wraplength=320,
+        )
+        self._traffic_hint.pack(fill="x", padx=8, pady=(0, 4))
+        self._traffic_hint.pack_forget()   # hidden by default
+
+        # Traffic execution status (shown briefly after a sign is acted on)
+        self._traffic_status = tk.Label(
+            vis_box, text="", bg=BG, fg=YELLOW,
+            font=("Segoe UI", 9, "bold"),
+        )
+        self._traffic_status.pack(pady=(0, 4))
+
         # ── CV Modes ──────────────────────────────────────────────
         cv_box = tk.LabelFrame(right, text="  CV Modes  ", bg=BG, fg=MAUVE,
                                font=("Segoe UI", 9, "bold"),
@@ -342,7 +358,9 @@ class CVCarGUI:
     def _activate_image(self):       self.car.mode_image_recognition()
     def _activate_color_track(self): self.car.mode_color_tracking(self._color_var.get())
     def _activate_visual(self):      self.car.mode_visual_patrol()
-    def _activate_traffic(self):     self.car.mode_traffic_identification()
+    def _activate_traffic(self):
+        self.car.mode_traffic_identification()
+        self._traffic_hint.pack(fill="x", padx=8, pady=(0, 4))
     def _activate_ml(self):          self.car.mode_machine_learning()
     def _activate_face(self):        self.car.mode_face_recognition()
     def _activate_ir1(self):         self.car.mode_line_follow_1()
@@ -355,6 +373,8 @@ class CVCarGUI:
             self._active_mode_name = "None"
         self._mode_badge.config(text="Standby", fg=MUTED)
         self._result_lbl.config(text="—", fg=MUTED)
+        self._traffic_hint.pack_forget()
+        self._traffic_status.config(text="")
         if not self.car.is_connected:
             return
         try:
@@ -382,6 +402,22 @@ class CVCarGUI:
     # Tag feed
     # ------------------------------------------------------------------
 
+    TRAFFIC_SIGNS = {"Go_Straight", "Turn_Right", "Turn_Left",
+                     "Turn_Around", "Throughout"}
+    TRAFFIC_ICONS = {
+        "Go_Straight": "↑", "Turn_Right":  "→", "Turn_Left": "←",
+        "Turn_Around": "↩", "Throughout":  "✕",
+    }
+    TRAFFIC_EXEC_MS = {
+        # How long the firmware's delay() keeps the car moving — used to
+        # show the "Executing…" status for the right duration.
+        "Go_Straight":  500,
+        "Turn_Right":   500,
+        "Turn_Left":    500,
+        "Throughout":   500,
+        "Turn_Around": 4350,   # 1450 + 1600 + 1300
+    }
+
     def _poll_tags(self):
         while True:
             tag = self.car.get_tag()
@@ -390,6 +426,22 @@ class CVCarGUI:
             self._append_tag(tag)
             # Update the big result label with the latest tag
             self._result_lbl.config(text=tag, fg=GREEN)
+            # Traffic-specific feedback
+            if self._active_mode_name == "Traffic Signs" and \
+                    tag in self.TRAFFIC_SIGNS:
+                icon = self.TRAFFIC_ICONS.get(tag, "")
+                self._traffic_status.config(
+                    text=f"✓ Seen: {icon} {tag}  —  remove sign, car acts in 500 ms…",
+                    fg=YELLOW,
+                )
+                exec_ms = self.TRAFFIC_EXEC_MS.get(tag, 500)
+                # After 500 ms debounce + execution time, show "Done"
+                self.root.after(
+                    500 + exec_ms,
+                    lambda t=tag, i=icon: self._traffic_status.config(
+                        text=f"✓ Done: {i} {t}", fg=GREEN
+                    ),
+                )
         self.root.after(100, self._poll_tags)
 
     def _append_tag(self, tag: str):
@@ -437,6 +489,8 @@ class CVCarGUI:
                 self._active_mode_name = "None"
             self._mode_badge.config(text="Standby", fg=MUTED)
             self._result_lbl.config(text="—", fg=MUTED)
+            self._traffic_hint.pack_forget()
+            self._traffic_status.config(text="")
 
     def _on_connect_fail(self, msg: str):
         self._conn_btn.config(state="normal", text="Connect", bg=GREEN)
